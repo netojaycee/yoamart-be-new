@@ -45,8 +45,8 @@ app.use(function (err, req, res, next) {
   res.status(500).json({ message: err.message })
 } as express.ErrorRequestHandler)
 
-const PORT = 5004;
+const PORT = process.env.PORT || 5004;
 
-app.listen(PORT, '0.0.0.0', () => { 
+app.listen(Number(PORT), '0.0.0.0', () => { 
   console.log('Port is listening on ' + PORT);
 })
