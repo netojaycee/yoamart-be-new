@@ -38,9 +38,12 @@ const productSchema = new Schema<ProductDocument>({
         type: Number,
         required: true,
     },
+    // quantity: Auto-calculated from ACTIVE batches. No longer manually set.
+    // When creating product, do NOT send quantity
+    // It will be auto-updated when batches are created/updated
     quantity:{
         type: Number,
-        required: true,
+        default: 0,  // Auto-synced from batches, not manually set
     },
     description:{
         type: String,

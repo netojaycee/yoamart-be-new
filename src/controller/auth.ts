@@ -18,13 +18,13 @@ import axios from "axios";
 export const createUser: RequestHandler = async (req, res) => {
   try {
     const { email, name, password, captcha } = req.body;
-    const response = await axios.post(
-      `https://www.google.com/recaptcha/api/siteverify?secret=${process.env.CAPTCHA_SECRET_KEY}&response=${captcha}`
-    );
+    // const response = await axios.post(
+    //   `https://www.google.com/recaptcha/api/siteverify?secret=${process.env.CAPTCHA_SECRET_KEY}&response=${captcha}`
+    // );
 
-    if (!response.data.success) {
-      return res.status(403).json({ message: "Invalid captcha" })
-    }
+    // if (!response.data.success) {
+    //   return res.status(403).json({ message: "Invalid captcha" })
+    // }
     const userExist = await User.findOne({ email });
     if (userExist) {
       return res.status(403).json({ message: "Email already exists!" });
@@ -58,12 +58,12 @@ export const signIn: RequestHandler = async (req, res) => {
   const { email, password, captcha } = req.body;
 
 
-  const response = await axios.post(
-    `https://www.google.com/recaptcha/api/siteverify?secret=${process.env.CAPTCHA_SECRET_KEY}&response=${captcha}`
-  );
-  if (!response.data.success) {
-    return res.status(403).json({ message: "Invalid captcha" });
-  }
+  // const response = await axios.post(
+  //   `https://www.google.com/recaptcha/api/siteverify?secret=${process.env.CAPTCHA_SECRET_KEY}&response=${captcha}`
+  // );
+  // if (!response.data.success) {
+  //   return res.status(403).json({ message: "Invalid captcha" });
+  // }
 
 
   // Find the user by email

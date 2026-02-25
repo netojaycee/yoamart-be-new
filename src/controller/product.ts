@@ -159,21 +159,22 @@ export const createProduct: RequestHandler = async (req, res) => {
     price,
     image,
     categoryId,
-    quantity,
+    // quantity is NO LONGER sent here - it will be auto-calculated from ACTIVE batches
     featured,
     discount,
   } = req.body;
+  
   const product = new Product({
     name,
     description,
     price,
     image,
     categoryId,
-    quantity,
+    // quantity: 0, // Default 0, will be auto-synced when batches are created
     featured,
     discount,
-
   });
+  
   await product.save();
   res.json({ product });
 };
@@ -186,11 +187,27 @@ export const updateProduct: RequestHandler = async (req, res) => {
     price,
     image,
     categoryId,
-    quantity,
+    // quantity,
+    // DO NOT allow updating quantity directly - it's auto-synced from batches
     featured,
     discount,
   } = req.body;
-  const product = await Product.findByIdAndUpdate(productId, req.body, {
+  
+  // Filter out quantity if it was sent (ignore it)
+  const updateData = {
+    name,
+    description,
+    price,
+    image,
+    categoryId,
+    featured,
+    discount,
+  };
+  
+  // Remove undefined fields
+  Object.keys(updateData).forEach(key => updateData[key] === undefined && delete updateData[key]);
+  
+  const product = await Product.findByIdAndUpdate(productId, updateData, {
     new: true,
   });
   if (!product) return res.status(400).json({ message: "product not found!" });

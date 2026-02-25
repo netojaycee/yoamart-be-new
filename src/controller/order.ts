@@ -8,6 +8,8 @@ import { deliveredOrderEmail, paymentConfirmationEmail, sendOrderConfirmationEma
 import product from "#/model/product";
 import { generateOrderNumber } from "#/utils/tokenHelper";
 import Driver from "#/model/driver";
+import Batch from "#/model/batch";
+import { reduceInventoryFEFO } from "#/utils/inventorySync";
 
 export const getAllUserOrders: RequestHandler = async (req, res) => {
     try {
@@ -289,6 +291,23 @@ export const createOrder: RequestHandler = async (req, res) => {
         }
         const orderNumber = generateOrderNumber(4);
 
+        // FEFO: Reduce inventory from batches before creating order
+        try {
+            for (const cartItem of cart) {
+                const productId = cartItem.id;
+                const quantityToReduce = parseInt(cartItem.quantity, 10);
+                
+                // Use FEFO logic to reduce from oldest expiring batch first
+                await reduceInventoryFEFO(productId, quantityToReduce);
+            }
+        } catch (error) {
+            console.error("❌ Inventory reduction failed:", error);
+            return res.status(400).json({ 
+                message: "Order failed: Unable to reduce inventory. May be out of stock.",
+                error: error.message 
+            });
+        }
+
         // Create a new order
         const order = new Order({
             userId,
@@ -310,7 +329,7 @@ export const createOrder: RequestHandler = async (req, res) => {
         await order.save();
 
         res.status(201).json({
-            message: "Order created successfully!",
+            message: "Order created successfully! Inventory reduced using FEFO.",
             orderId: order._id,
             order,
         });

@@ -3,6 +3,7 @@ import 'dotenv/config'
 import './db'
 import cors from 'cors'
 import "express-async-errors"
+import { initializeJobs } from './jobs/cron'
 import categoryRouter from './routers/category'
 import productRouter from './routers/product'
 import authRouter from './routers/auth'
@@ -14,6 +15,10 @@ import searchRouter from './routers/search';
 import newsletterRouter from './routers/newsletter';
 import contactRouter from './routers/contact';
 import driverRouter from './routers/driver';
+import batchRouter from './routers/batch';
+import alertRouter from './routers/alert';
+import alertRuleRouter from './routers/alertRule';
+import actionRouter from './routers/action';
 
 
 const app = express();
@@ -39,6 +44,10 @@ app.use('/api/search', searchRouter)
 app.use('/api/newsletter', newsletterRouter)
 app.use('/api/contact', contactRouter)
 app.use('/api/driver', driverRouter)
+app.use('/api/batch', batchRouter)
+app.use('/api/alert', alertRouter)
+app.use('/api/alert-rule', alertRuleRouter)
+app.use('/api/action', actionRouter)
  
 
 app.use(function (err, req, res, next) {
@@ -49,4 +58,6 @@ const PORT = process.env.PORT || 5004;
 
 app.listen(Number(PORT), '0.0.0.0', () => { 
   console.log('Port is listening on ' + PORT);
-})
+  // Initialize background jobs after server starts
+  initializeJobs();
+});
