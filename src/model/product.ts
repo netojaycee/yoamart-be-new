@@ -3,7 +3,7 @@ import { Model, model, Schema, Types } from "mongoose";
 interface ProductDocument{
     // _id: Types.ObjectId;
     name: string;
-    categoryId: Types.ObjectId;
+    categoryId?: Types.ObjectId;
     brandId: Types.ObjectId;
     image: string[];
     price: number;
@@ -13,7 +13,8 @@ interface ProductDocument{
     discount: number;
     isFeatured: boolean;
     isHot: boolean;
-    inStock: boolean
+    inStock: boolean;
+    type: "regular" | "perishable";
 }
 
 const productSchema = new Schema<ProductDocument>({
@@ -24,7 +25,7 @@ const productSchema = new Schema<ProductDocument>({
     categoryId:{
         type: Schema.Types.ObjectId,
         ref: "Category",
-        required: true,
+        required: false,
     },
     brandId: {
         type: Schema.Types.ObjectId,
@@ -68,6 +69,12 @@ const productSchema = new Schema<ProductDocument>({
     inStock:{
         type: Boolean,
         default: true
+    },
+    type: {
+        type: String,
+        enum: ["regular", "perishable"],
+        default: "regular",
+        required: true
     }
 }, {timestamps: true});
 

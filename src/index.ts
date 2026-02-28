@@ -19,6 +19,7 @@ import batchRouter from './routers/batch';
 import alertRouter from './routers/alert';
 import alertRuleRouter from './routers/alertRule';
 import actionRouter from './routers/action';
+import migrationRouter from './routers/migration';
 
 
 const app = express();
@@ -48,6 +49,7 @@ app.use('/api/batch', batchRouter)
 app.use('/api/alert', alertRouter)
 app.use('/api/alert-rule', alertRuleRouter)
 app.use('/api/action', actionRouter)
+app.use('/api/migration', migrationRouter)
  
 
 app.use(function (err, req, res, next) {

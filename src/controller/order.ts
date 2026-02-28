@@ -291,20 +291,50 @@ export const createOrder: RequestHandler = async (req, res) => {
         }
         const orderNumber = generateOrderNumber(4);
 
-        // FEFO: Reduce inventory from batches before creating order
+        // Validate inventory and product types before creating order
         try {
             for (const cartItem of cart) {
                 const productId = cartItem.id;
                 const quantityToReduce = parseInt(cartItem.quantity, 10);
-                
-                // Use FEFO logic to reduce from oldest expiring batch first
-                await reduceInventoryFEFO(productId, quantityToReduce);
+
+                // Check product exists
+                const prod = await product.findById(productId);
+                if (!prod) {
+                    return res.status(400).json({ message: `Product not found: ${productId}` });
+                }
+
+                // Check product is "regular" type (not perishable)
+                if (prod.type === "perishable") {
+                    return res.status(400).json({
+                        message: `Cannot order perishable product: ${prod.name}. This item is only available in-store.`
+                    });
+                }
+
+                // Check sufficient quantity
+                if (prod.quantity < quantityToReduce) {
+                    return res.status(400).json({
+                        message: `Insufficient stock for ${prod.name}. Available: ${prod.quantity}, Requested: ${quantityToReduce}`
+                    });
+                }
+            }
+
+            // All validations passed, reduce inventory directly from product quantity
+            for (const cartItem of cart) {
+                const productId = cartItem.id;
+                const quantityToReduce = parseInt(cartItem.quantity, 10);
+
+                // Directly reduce product quantity for regular products
+                await product.findByIdAndUpdate(
+                    productId,
+                    { $inc: { quantity: -quantityToReduce } },
+                    { new: true }
+                );
             }
         } catch (error) {
             console.error("❌ Inventory reduction failed:", error);
-            return res.status(400).json({ 
+            return res.status(400).json({
                 message: "Order failed: Unable to reduce inventory. May be out of stock.",
-                error: error.message 
+                error: error.message
             });
         }
 
@@ -329,7 +359,7 @@ export const createOrder: RequestHandler = async (req, res) => {
         await order.save();
 
         res.status(201).json({
-            message: "Order created successfully! Inventory reduced using FEFO.",
+            message: "Order created successfully! Inventory reduced from regular products.",
             orderId: order._id,
             order,
         });

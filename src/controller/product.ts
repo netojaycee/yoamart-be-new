@@ -28,8 +28,8 @@ interface categorySearchResult {
 
 
 export const getAllProducts: RequestHandler = async (req, res) => {
-  const { page = 1, limit = 10, category, min, max, sort, inStock, outOfStock } = req.query;
-
+  const { page = 1, limit = 10, category, min, max, sort, inStock, outOfStock, type } = req.query;
+// console.log("Query parameters:", req.query); // Debug log for query parameters
   // Parse query parameters as integers
   const pageNumber = parseInt(page as string, 10);
   const limitNumber = parseInt(limit as string, 10);
@@ -47,6 +47,9 @@ export const getAllProducts: RequestHandler = async (req, res) => {
     query.categoryId = { $in: categoryIds.map(id => new mongoose.Types.ObjectId(id as string)) };
   }
 
+  if (type && ["regular", "perishable"].includes(type as string)) {
+    query.type = type;
+  }
 
   if (inStock) {
     query.inStock = true
@@ -159,20 +162,27 @@ export const createProduct: RequestHandler = async (req, res) => {
     price,
     image,
     categoryId,
-    // quantity is NO LONGER sent here - it will be auto-calculated from ACTIVE batches
-    featured,
-    discount,
+    quantity,
+    isFeatured = false,
+    discount = 0,
+    type = "regular", // Default to "regular", can be "regular" or "perishable"
   } = req.body;
+
+  // Validate type
+  if (!["regular", "perishable"].includes(type)) {
+    return res.status(400).json({ message: "Type must be 'regular' or 'perishable'" });
+  }
   
   const product = new Product({
     name,
     description,
     price,
     image,
-    categoryId,
-    // quantity: 0, // Default 0, will be auto-synced when batches are created
-    featured,
+    categoryId : categoryId ? new mongoose.Types.ObjectId(categoryId) : undefined,
+    quantity, 
+    isFeatured,
     discount,
+    type,
   });
   
   await product.save();
@@ -187,11 +197,17 @@ export const updateProduct: RequestHandler = async (req, res) => {
     price,
     image,
     categoryId,
-    // quantity,
+    quantity,
     // DO NOT allow updating quantity directly - it's auto-synced from batches
-    featured,
+    isFeatured,
     discount,
+    type,
   } = req.body;
+
+  // Validate type if provided
+  if (type && !["regular", "perishable"].includes(type)) {
+    return res.status(400).json({ message: "Type must be 'regular' or 'perishable'" });
+  }
   
   // Filter out quantity if it was sent (ignore it)
   const updateData = {
@@ -199,9 +215,11 @@ export const updateProduct: RequestHandler = async (req, res) => {
     description,
     price,
     image,
-    categoryId,
-    featured,
+    categoryId: categoryId ? new mongoose.Types.ObjectId(categoryId) : undefined,
+    isFeatured,
     discount,
+    type,
+    quantity,
   };
   
   // Remove undefined fields
@@ -400,7 +418,7 @@ export const filterProductsSearch: RequestHandler = async (req, res) => {
     const [products, total] = await Promise.all([
       Product.find(query)
         .populate<{ categoryId: { name: string } }>("categoryId")
-        .select("name price image discount quantity featured categoryId")
+        .select("name price image discount quantity isFeatured categoryId")
         .skip(skip)
         .limit(pageLimit),
       Product.countDocuments(query),
@@ -413,7 +431,7 @@ export const filterProductsSearch: RequestHandler = async (req, res) => {
       image: product.image,
       discount: product.discount,
       inStock: product.inStock,
-      featured: product.featured,
+      isFeatured: product.isFeatured,
     }));
 
     return res.json({
@@ -467,7 +485,7 @@ export const sortProducts: RequestHandler = async (req, res) => {
     // Fetch sorted products
     const products = await Product.find()
       .sort(sortOption)
-      .select("name price image discount featured createdAt");
+      .select("name price image discount isFeatured createdAt");
 
     return res.json({ products });
   } catch (error) {
@@ -498,7 +516,7 @@ export const toggleFeaturedProduct: RequestHandler = async (req, res) => {
       product,
     });
   } catch (error) {
-    console.error("Error toggling featured status:", error);
+    console.error("Error toggling isFeatured status:", error);
     res.status(500).json({ message: "Internal Server Error", error });
   }
 };

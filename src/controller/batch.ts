@@ -14,6 +14,13 @@ export const createBatch: RequestHandler = async (req, res) => {
     const product = await Product.findById(productId);
     if (!product) return res.status(400).json({ message: "Product not found!" });
 
+    // Validate product is perishable (batches only for perishable products)
+    if (product.type !== "perishable") {
+        return res.status(400).json({ 
+            message: "Batches can only be created for perishable products. This product is marked as 'regular'." 
+        });
+    }
+
     // Validate dates
     const expiry = new Date(expiryDate);
     if (isNaN(expiry.getTime())) return res.status(400).json({ message: "Invalid expiry date!" });
@@ -122,4 +129,20 @@ export const getBatchesByStatus: RequestHandler = async (req, res) => {
         .sort({ expiryDate: 1 });
 
     res.json({ batches, count: batches.length });
+};
+
+export const deleteBatch: RequestHandler = async (req, res) => {
+    const { batchId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(batchId)) {
+        return res.status(400).json({ message: "Invalid batch ID!" });
+    }
+
+    const batch = await Batch.findByIdAndDelete(batchId);
+    if (!batch) return res.status(404).json({ message: "Batch not found!" });
+
+    // Auto-update product quantity from batches
+    await updateProductQuantityFromBatches(batch.productId);
+
+    res.json({ message: "Batch deleted successfully." });
 };
